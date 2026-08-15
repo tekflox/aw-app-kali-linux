@@ -1,17 +1,17 @@
 ---
-name: aw-kalix
-description: The Kalix app — a full Kali Linux KDE desktop running in the browser as a Tier-2 aw-workspace container (stock lscr.io/linuxserver/kali-linux image). Covers what is mounted where, what survives a container recreation, how to install packages or add boot hooks so they persist, and the device limits (no webcam/GPU passthrough) that come from running it as an app instead of a compose service. Load this whenever a task involves the Kalix / "Linux" desktop window, or when something in that desktop was lost after an update.
+name: aw-kali-linux
+description: The Kali Linux app — a full KDE desktop running in the browser as a Tier-2 aw-workspace container (stock lscr.io/linuxserver/kali-linux image). Covers what is mounted where, what survives a container recreation, how to install packages or add boot hooks so they persist, and the device limits (no webcam/GPU passthrough) that come from running it as an app instead of a compose service. Load this whenever a task involves the Kali Linux desktop window, or when something in that desktop was lost after an update.
 ---
 
-# Kalix — the browser Kali desktop
+# Kali Linux — the browser desktop
 
-Kalix is the decoupled-app port of the monolith's `aw-kali` docker service
+This app is the decoupled-app port of the monolith's `aw-kali` docker service
 (`agentic-workspace` → `src/config/aw.json`, `docker_services[].name ==
 "aw-kali"`, surfaced as the workspace app `id: "linux"`, label **Linux**).
 Same upstream image, no fork: `lscr.io/linuxserver/kali-linux:latest`.
 
 Open it from the Apps grid, or at its own subdomain
-`https://kalix.app.<slug>.workspace.<apex>`. It is a KasmVNC web desktop —
+`https://kali-linux.app.<slug>.workspace.<apex>`. It is a KasmVNC web desktop —
 no VNC client, no extra port.
 
 ## The filesystem map
@@ -25,7 +25,7 @@ no VNC client, no extra port.
 
 That last row is the one that bites. `apt-get install <x>` writes to `/usr`
 and `/var`, so it is **gone** on the next app update, workspace redeploy, or
-`aw-workspace-cli restart kalix` that recreates the container.
+`aw-workspace-cli restart kali-linux` that recreates the container.
 
 To make a package stick, install it from a boot hook instead:
 
@@ -62,7 +62,7 @@ today. Don't spend time looking for the manifest key — it isn't there.
    PipeWire + `pipewire-v4l2` and start them once `plasmashell` was up.
    `_parse_run_flags` in aw-workspace `src/apps/containers.py` accepts
    **only** `--shm-size` and raises on anything else, and the manifest has no
-   `devices`/`group_add` fields — so there is no camera in Kalix. The
+   `devices`/`group_add` fields — so there is no camera here. The
    PipeWire script is not shipped for the same reason (it exists to feed
    `/dev/video10`); if device passthrough ever lands, port it from the
    monolith path above rather than rewriting it.
@@ -82,7 +82,7 @@ today. Don't spend time looking for the manifest key — it isn't there.
 
 3. **The workspace mounted read-write.** The monolith bound
    `.:/home/abc/agentic-workspace:cached` — the whole live tree, writable
-   from a GUI session. Kalix mounts `$AW_WORKSPACE_REPOS` at `/config/repos`
+   from a GUI session. This app mounts `$AW_WORKSPACE_REPOS` at `/config/repos`
    **read-only** on purpose. Anything you need to write, write under
    `/config`; to hand a file to the rest of the workspace, use the shared
    scratch dir conventions (`.tmp/`) from a workspace-side session instead.

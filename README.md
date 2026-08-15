@@ -1,4 +1,4 @@
-# aw-app-kalix
+# aw-app-kali-linux
 
 A full **Kali Linux KDE desktop in the browser**, packaged as a decoupled
 aw-workspace app. Port of the `agentic-workspace` monolith's `aw-kali` docker
@@ -14,7 +14,7 @@ the resource envelope and the window.
 
 ```
 aw-app.json              the whole app — Tier-2 container manifest
-skills/aw-kalix/         SKILL.md contributed to the workspace skills index
+skills/aw-kali-linux/         SKILL.md contributed to the workspace skills index
 schemas/                 manifest JSON Schema (mirrored from aw-app-template)
 tests/validate_manifest.py
 .github/workflows/       release → aw-marketplace catalog sync
@@ -61,14 +61,14 @@ install durable tooling without this repo ever building an image.
 - **The workspace tree is read-only here**, where the monolith bound it
   read-write at `/home/abc/agentic-workspace`.
 
-Details and the workarounds are in [`skills/aw-kalix/SKILL.md`](skills/aw-kalix/SKILL.md).
+Details and the workarounds are in [`skills/aw-kali-linux/SKILL.md`](skills/aw-kali-linux/SKILL.md).
 
 ## Install
 
 Through the marketplace, once the catalog serves this version:
 
 ```bash
-aw-workspace-cli marketplace install kalix
+aw-workspace-cli marketplace install kali-linux
 ```
 
 Sideloading (`POST /api/apps/install {package_dir}`) works for a first look

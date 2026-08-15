@@ -1,9 +1,9 @@
 {
   "manifest_version": 1,
-  "id": "kalix",
-  "name": "Kalix",
+  "id": "kali-linux",
+  "name": "Kali Linux",
   "version": "0.2.0",
-  "description": "A full Kali Linux desktop in your browser. KDE Plasma with Kali's security toolset, opened as a workspace window \u2014 no VNC client, no local install. Everything you change sticks: your home directory, settings and any package you apt-get survive restarts and app updates, and this workspace's repos are mounted read-only so you can open them from a real desktop.",
+  "description": "A full Kali Linux desktop in your browser. KDE Plasma with Kali's security toolset, opened as a workspace window — no VNC client, no local install. Everything you change sticks: your home directory, settings and any package you apt-get survive restarts and app updates, and this workspace's repos are mounted read-only so you can open them from a real desktop.",
   "icon": "terminal",
   "tier": "container",
   "category": "Dev Tools",
@@ -58,8 +58,8 @@
   "contributes": {
     "windows": [
       {
-        "id": "kalix.main",
-        "title": "Kalix",
+        "id": "kali-linux.main",
+        "title": "Kali Linux",
         "icon": "terminal",
         "body": {
           "type": "managed_app",
@@ -70,9 +70,9 @@
     ],
     "skills": [
       {
-        "id": "aw-kalix",
-        "path": "skills/aw-kalix/SKILL.md",
-        "description": "Use the Kalix browser-based Kali Linux desktop \u2014 what is mounted where, what persists, and the device/webcam limits of running it as a Tier-2 app."
+        "id": "aw-kali-linux",
+        "path": "skills/aw-kali-linux/SKILL.md",
+        "description": "Use the Kali Linux browser desktop — what is mounted where, what persists, and the device/webcam limits of running it as a Tier-2 app."
       }
     ]
   },
