@@ -1,0 +1,93 @@
+{
+  "manifest_version": 1,
+  "id": "kalix",
+  "name": "Kalix",
+  "version": "0.1.0",
+  "description": "A full Kali Linux desktop in your browser. KDE Plasma with Kali's security toolset, opened as a workspace window — no VNC client, no local install. Everything you change sticks: your home directory, settings and any package you apt-get survive restarts and app updates, and this workspace's repos are mounted read-only so you can open them from a real desktop.",
+  "icon": "terminal",
+  "tier": "container",
+  "category": "Dev Tools",
+  "publisher": "TekFlox",
+  "requires_ui_refresh": true,
+  "resource_estimate": {
+    "cpu": "high",
+    "memory": "~2 GB",
+    "disk": "~8 GB"
+  },
+  "runtime": {
+    "image": "lscr.io/linuxserver/kali-linux:latest",
+    "port": 3500,
+    "resources": {
+      "cpus": 2,
+      "mem_mb": 4096
+    },
+    "run_flags_needed": [
+      "--shm-size=1g"
+    ],
+    "env": {
+      "CUSTOM_PORT": "3500",
+      "PUID": "1000",
+      "PGID": "1000",
+      "TZ": "${config.timezone}"
+    },
+    "volumes": [
+      {
+        "source": "$AW_APP_DATA",
+        "target": "/config",
+        "mode": "rw",
+        "reason": "The desktop's whole home directory — KDE profile, Firefox/Burp state, ~/Desktop, and the apt/dpkg changes linuxserver's image keeps under /config. Without it every container recreation (app update, workspace redeploy) resets the machine to a fresh Kali. Ported from the monolith's ./data/aw-kali:/config bind (agentic-workspace src/config/aw.json docker_services aw-kali)."
+      },
+      {
+        "source": "$AW_APP_DATA/custom-cont-init.d",
+        "target": "/custom-cont-init.d",
+        "mode": "rw",
+        "reason": "linuxserver's init hook — every executable script dropped here runs as root before the KDE session starts. This is how the monolith delivered its PipeWire/V4L2 bridge (tools/aw-kali/custom-cont-init.d/10-pipewire.sh). An app package dir is immutable and the runtime only binds $AW_APP_DATA / $AW_WORKSPACE_* sources, so pointing the hook at app data is what keeps the stock upstream image extensible without forking it into a custom build."
+      },
+      {
+        "source": "$AW_WORKSPACE_REPOS",
+        "target": "/config/repos",
+        "mode": "ro",
+        "reason": "This workspace's checkouts, so the desktop can open/read them from Dolphin, an editor, or a shell. Read-only on purpose: the monolith mounted the whole workspace read-write (.:/home/abc/agentic-workspace:cached) and a GUI session could scribble on the live tree. Writes belong in /config."
+      }
+    ]
+  },
+  "permissions": [
+    "containers:manage",
+    "fs:workspace-data"
+  ],
+  "contributes": {
+    "windows": [
+      {
+        "id": "kalix.main",
+        "title": "Kalix",
+        "icon": "terminal",
+        "body": {
+          "type": "managed_app",
+          "kind": "web",
+          "path": "/"
+        }
+      }
+    ],
+    "skills": [
+      {
+        "id": "aw-kalix",
+        "path": "skills/aw-kalix/SKILL.md",
+        "description": "Use the Kalix browser-based Kali Linux desktop — what is mounted where, what persists, and the device/webcam limits of running it as a Tier-2 app."
+      }
+    ]
+  },
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "timezone": {
+        "type": "string",
+        "default": "America/New_York",
+        "title": "Timezone",
+        "description": "IANA timezone for the desktop session (e.g. America/Sao_Paulo). Changing it recreates the container."
+      }
+    },
+    "required": []
+  },
+  "dependencies": {},
+  "migrations": {}
+}
