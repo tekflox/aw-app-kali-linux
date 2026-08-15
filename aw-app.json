@@ -2,8 +2,8 @@
   "manifest_version": 1,
   "id": "kalix",
   "name": "Kalix",
-  "version": "0.1.0",
-  "description": "A full Kali Linux desktop in your browser. KDE Plasma with Kali's security toolset, opened as a workspace window — no VNC client, no local install. Everything you change sticks: your home directory, settings and any package you apt-get survive restarts and app updates, and this workspace's repos are mounted read-only so you can open them from a real desktop.",
+  "version": "0.2.0",
+  "description": "A full Kali Linux desktop in your browser. KDE Plasma with Kali's security toolset, opened as a workspace window \u2014 no VNC client, no local install. Everything you change sticks: your home directory, settings and any package you apt-get survive restarts and app updates, and this workspace's repos are mounted read-only so you can open them from a real desktop.",
   "icon": "terminal",
   "tier": "container",
   "category": "Dev Tools",
@@ -35,13 +35,13 @@
         "source": "$AW_APP_DATA",
         "target": "/config",
         "mode": "rw",
-        "reason": "The desktop's whole home directory — KDE profile, Firefox/Burp state, ~/Desktop, and the apt/dpkg changes linuxserver's image keeps under /config. Without it every container recreation (app update, workspace redeploy) resets the machine to a fresh Kali. Ported from the monolith's ./data/aw-kali:/config bind (agentic-workspace src/config/aw.json docker_services aw-kali)."
+        "reason": "The desktop's whole home directory \u2014 KDE profile, Firefox/Burp state, ~/Desktop, and the apt/dpkg changes linuxserver's image keeps under /config. Without it every container recreation (app update, workspace redeploy) resets the machine to a fresh Kali. Ported from the monolith's ./data/aw-kali:/config bind (agentic-workspace src/config/aw.json docker_services aw-kali)."
       },
       {
         "source": "$AW_APP_DATA/custom-cont-init.d",
         "target": "/custom-cont-init.d",
         "mode": "rw",
-        "reason": "linuxserver's init hook — every executable script dropped here runs as root before the KDE session starts. This is how the monolith delivered its PipeWire/V4L2 bridge (tools/aw-kali/custom-cont-init.d/10-pipewire.sh). An app package dir is immutable and the runtime only binds $AW_APP_DATA / $AW_WORKSPACE_* sources, so pointing the hook at app data is what keeps the stock upstream image extensible without forking it into a custom build."
+        "reason": "linuxserver's init hook \u2014 every executable script dropped here runs as root before the KDE session starts. This is how the monolith delivered its PipeWire/V4L2 bridge (tools/aw-kali/custom-cont-init.d/10-pipewire.sh). An app package dir is immutable and the runtime only binds $AW_APP_DATA / $AW_WORKSPACE_* sources, so pointing the hook at app data is what keeps the stock upstream image extensible without forking it into a custom build."
       },
       {
         "source": "$AW_WORKSPACE_REPOS",
@@ -72,7 +72,7 @@
       {
         "id": "aw-kalix",
         "path": "skills/aw-kalix/SKILL.md",
-        "description": "Use the Kalix browser-based Kali Linux desktop — what is mounted where, what persists, and the device/webcam limits of running it as a Tier-2 app."
+        "description": "Use the Kalix browser-based Kali Linux desktop \u2014 what is mounted where, what persists, and the device/webcam limits of running it as a Tier-2 app."
       }
     ]
   },
