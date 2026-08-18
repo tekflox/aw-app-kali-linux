@@ -53,7 +53,8 @@
   },
   "permissions": [
     "containers:manage",
-    "fs:workspace-data"
+    "fs:workspace-data",
+    "fs:workspace-read"
   ],
   "contributes": {
     "windows": [
