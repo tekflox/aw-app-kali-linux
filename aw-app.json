@@ -2,7 +2,7 @@
   "manifest_version": 1,
   "id": "kali-linux",
   "name": "Kali Linux",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "A full Kali Linux desktop in your browser. KDE Plasma with Kali's security toolset, opened as a workspace window \u2014 no VNC client, no local install. Everything you change sticks: your home directory, settings and any package you apt-get survive restarts and app updates, and this workspace's repos are mounted read-only so you can open them from a real desktop.",
   "icon": "terminal",
   "tier": "container",
