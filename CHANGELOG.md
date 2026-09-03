@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+Fix: permanent black screen, KasmVNC stuck on "WebSocket disconnected.
+Attempting to reconnect..." — the stock image's `svc-selkies` init script
+deadlocks forever waiting for `/defaults/pid`, a file nothing in the image's
+boot chain ever creates when `PIXELFLUX_WAYLAND=true`, so `selkies`/`labwc`
+never start. Fixed by shipping `custom-cont-init.d/10-unblock-selkies.sh`
+(pre-creates `/dev/shm/audio.lock` to skip the deadlocked audio-sink gate)
+as a package-relative, single-file volume mounted into the existing
+`/custom-cont-init.d` hook dir — lands on every install, including a fresh
+one, without depending on `$AW_APP_DATA` already having a copy of it.
+
 ## 0.3.0
 
 Renamed. The app was briefly published as `kalix` (repo `aw-app-kalix`) — a

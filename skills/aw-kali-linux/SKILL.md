@@ -51,6 +51,32 @@ idempotent: they re-run on every boot, including warm ones.
 > the binary wasn't installed yet — which is exactly the case the autostart
 > was there to fix.
 
+A second, package-relative file also lands in this same directory on every
+boot: `custom-cont-init.d/10-unblock-selkies.sh` in this repo, bind-mounted
+read-only straight from the app package (not from `$AW_APP_DATA`) onto
+`/custom-cont-init.d/10-unblock-selkies.sh`. It pre-creates
+`/dev/shm/audio.lock` to skip a deadlock in the stock image's own
+`svc-selkies` init script — see "Known issues" below. Package-relative
+volumes ship with every install of the repo's own version, so this fix
+reaches a brand-new install too, without depending on `$AW_APP_DATA` already
+having a copy.
+
+## Known issues
+
+**Black screen, KasmVNC stuck on "WebSocket disconnected. Attempting to
+reconnect..."** (bug:kali-linux-desktop-black-screen, root-caused
+2026-09-03) — the stock image's `svc-selkies/run` gates the whole service
+behind `until [ -f /defaults/pid ]; do sleep .5; done`, and nothing in the
+image's boot chain ever creates `/defaults/pid` when `PIXELFLUX_WAYLAND=true`
+(`svc-xorg`, the only plausible writer, bails immediately in Wayland mode).
+The loop spins forever, `selkies`/`labwc` never start, `/config/.XDG/wayland-1`
+never appears, and KasmVNC has nothing to serve. Fixed as of the
+`10-unblock-selkies.sh` hook above — if this ever regresses (e.g. a
+linuxserver image update reworks the gate), check `docker logs kali-linux`
+for the boot log stalling at `[svc-de] Wayland mode: Waiting for socket at
+/config/.XDG/wayland-1...`, then `ps aux` inside the container for a stuck
+`sleep .5`/`sleep 0.5` pair with no `selkies`/`labwc` process.
+
 ## What did NOT come across from the monolith
 
 Three things in `aw.json`'s `aw-kali` service have no Tier-2 equivalent

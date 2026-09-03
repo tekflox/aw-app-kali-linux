@@ -44,6 +44,12 @@
         "reason": "linuxserver's init hook \u2014 every executable script dropped here runs as root before the KDE session starts. This is how the monolith delivered its PipeWire/V4L2 bridge (tools/aw-kali/custom-cont-init.d/10-pipewire.sh). An app package dir is immutable and the runtime only binds $AW_APP_DATA / $AW_WORKSPACE_* sources, so pointing the hook at app data is what keeps the stock upstream image extensible without forking it into a custom build."
       },
       {
+        "source": "custom-cont-init.d/10-unblock-selkies.sh",
+        "target": "/custom-cont-init.d/10-unblock-selkies.sh",
+        "mode": "ro",
+        "reason": "bug:kali-linux-desktop-black-screen \u2014 the stock image's svc-selkies/run deadlocks forever on `until [ -f /defaults/pid ]; do sleep .5; done` because nothing in the image's boot chain ever creates /defaults/pid when PIXELFLUX_WAYLAND=true, so selkies/labwc never start and KasmVNC serves a permanent black screen. This single-file, package-relative mount lands the fix INSIDE the $AW_APP_DATA/custom-cont-init.d hook dir above without depending on that directory's (user-writable, empty-by-default) contents \u2014 a fresh install gets the fix immediately, not only after someone manually drops a script into their own app data."
+      },
+      {
         "source": "$AW_WORKSPACE_REPOS",
         "target": "/config/repos",
         "mode": "ro",
