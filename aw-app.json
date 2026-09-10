@@ -26,8 +26,8 @@
     ],
     "env": {
       "CUSTOM_PORT": "3500",
-      "PUID": "1000",
-      "PGID": "1000",
+      "PUID": "${data.uid}",
+      "PGID": "${data.gid}",
       "TZ": "${config.timezone}"
     },
     "volumes": [
@@ -47,7 +47,7 @@
         "source": "custom-cont-init.d/00-fix-config-ownership.sh",
         "target": "/custom-cont-init.d/00-fix-config-ownership.sh",
         "mode": "ro",
-        "reason": "kali-linux:config-ownership-drift-blocks-writes \u2014 linuxserver.io images chown /config to PUID:PGID exactly once, on first boot, and never revisit it on later boots. This volume's ownership drifted to the wrong uid before this fix shipped (2890 of 2897 files under uid 1001, not abc/1000), leaving plasmashellrc (mode 600) unwritable and plasmashell refusing to start. Re-chowning /config to abc:abc on every boot (excluding the separate read-only /config/repos mount) makes this self-healing instead of a one-time manual `docker exec chown`. Numbered \"00-\" so it runs BEFORE 10-unblock-selkies.sh below \u2014 ownership must be correct before anything else in the hook dir tries to write."
+        "reason": "kali-linux:config-ownership-drift-blocks-writes \u2014 a deliberate FALLBACK, not the fix; see the script's own header. The real cause (proven on kali-linux:config-ownership-drift-root-cause-review) is that every workspace redeploy recursively chowns the whole /opt/aw-workspace bind mount, which contains $AW_APP_DATA, to the workspace's host uid; that is why PUID/PGID above are now derived (${data.uid}) rather than hardcoded. This hook stays for the cases derivation does not cover \u2014 a core build without the placeholder, and an already-populated /config left mid-transition. It re-chowns /config to abc:abc on every boot, excluding the separate read-only /config/repos mount. Numbered \"00-\" so it runs BEFORE 10-unblock-selkies.sh below \u2014 ownership must be correct before anything else in the hook dir tries to write."
       },
       {
         "source": "custom-cont-init.d/10-unblock-selkies.sh",
