@@ -44,6 +44,12 @@
         "reason": "linuxserver's init hook \u2014 every executable script dropped here runs as root before the KDE session starts. This is how the monolith delivered its PipeWire/V4L2 bridge (tools/aw-kali/custom-cont-init.d/10-pipewire.sh). An app package dir is immutable and the runtime only binds $AW_APP_DATA / $AW_WORKSPACE_* sources, so pointing the hook at app data is what keeps the stock upstream image extensible without forking it into a custom build."
       },
       {
+        "source": "custom-cont-init.d/00-fix-config-ownership.sh",
+        "target": "/custom-cont-init.d/00-fix-config-ownership.sh",
+        "mode": "ro",
+        "reason": "kali-linux:config-ownership-drift-blocks-writes \u2014 linuxserver.io images chown /config to PUID:PGID exactly once, on first boot, and never revisit it on later boots. This volume's ownership drifted to the wrong uid before this fix shipped (2890 of 2897 files under uid 1001, not abc/1000), leaving plasmashellrc (mode 600) unwritable and plasmashell refusing to start. Re-chowning /config to abc:abc on every boot (excluding the separate read-only /config/repos mount) makes this self-healing instead of a one-time manual `docker exec chown`. Numbered \"00-\" so it runs BEFORE 10-unblock-selkies.sh below \u2014 ownership must be correct before anything else in the hook dir tries to write."
+      },
+      {
         "source": "custom-cont-init.d/10-unblock-selkies.sh",
         "target": "/custom-cont-init.d/10-unblock-selkies.sh",
         "mode": "ro",

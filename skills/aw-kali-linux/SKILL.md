@@ -51,17 +51,32 @@ idempotent: they re-run on every boot, including warm ones.
 > the binary wasn't installed yet — which is exactly the case the autostart
 > was there to fix.
 
-A second, package-relative file also lands in this same directory on every
-boot: `custom-cont-init.d/10-unblock-selkies.sh` in this repo, bind-mounted
-read-only straight from the app package (not from `$AW_APP_DATA`) onto
-`/custom-cont-init.d/10-unblock-selkies.sh`. It pre-creates
-`/dev/shm/audio.lock` to skip a deadlock in the stock image's own
-`svc-selkies` init script — see "Known issues" below. Package-relative
-volumes ship with every install of the repo's own version, so this fix
-reaches a brand-new install too, without depending on `$AW_APP_DATA` already
-having a copy.
+Two more package-relative files land in this same directory on every boot,
+both bind-mounted read-only straight from the app package (not from
+`$AW_APP_DATA`): `custom-cont-init.d/00-fix-config-ownership.sh`, which
+re-chowns `/config` to `abc:abc` (excluding `/config/repos`) — see "Known
+issues" below — and `custom-cont-init.d/10-unblock-selkies.sh`, which
+pre-creates `/dev/shm/audio.lock` to skip a deadlock in the stock image's own
+`svc-selkies` init script. The `00-`/`10-` numbering is deliberate: ownership
+has to be fixed before anything else in the hook dir tries to write.
+Package-relative volumes ship with every install of the repo's own version,
+so both fixes reach a brand-new install too, without depending on
+`$AW_APP_DATA` already having a copy.
 
 ## Known issues
+
+**`/config` ownership drift blocking writes** (e.g. plasmashell refusing to
+start with "Configuration file ... not writable. Please contact your system
+administrator.") (kali-linux:config-ownership-drift-blocks-writes,
+root-caused 2026-09-10) — linuxserver.io images chown `/config` to
+PUID:PGID exactly once, on first boot, guarded by an internal sentinel, and
+never revisit it on later boots. If this volume's ownership ever drifts to
+the wrong uid (confirmed once: 2890 of 2897 files under uid 1001, not
+`abc`/1000), it stays wrong forever, through every later container
+recreation, app update, or workspace redeploy — until something re-chowns
+it. Fixed as of the `00-fix-config-ownership.sh` hook above, which does that
+on every boot. If this ever regresses, `docker exec -u root kali-linux ls -la
+/config` and compare owners against `id abc` inside the container.
 
 **Black screen, KasmVNC stuck on "WebSocket disconnected. Attempting to
 reconnect..."** (bug:kali-linux-desktop-black-screen, root-caused

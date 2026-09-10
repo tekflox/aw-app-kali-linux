@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+Fix: `/config` ownership drift silently blocking writes (e.g. plasmashell
+refusing to start with "Configuration file ... not writable"). linuxserver.io
+images chown `/config` to PUID:PGID exactly once, on first boot, and never
+revisit it — once this volume's ownership drifts to the wrong uid it stays
+wrong forever, through every later container recreation, app update, or
+workspace redeploy. Fixed by shipping
+`custom-cont-init.d/00-fix-config-ownership.sh`, which re-chowns `/config` to
+`abc:abc` on every boot (excluding the separate read-only `/config/repos`
+mount), as a package-relative, single-file volume mounted the same way as
+`10-unblock-selkies.sh` — numbered `00-` so it runs first, before anything
+else in the hook dir tries to write.
+
 Fix: permanent black screen, KasmVNC stuck on "WebSocket disconnected.
 Attempting to reconnect..." — the stock image's `svc-selkies` init script
 deadlocks forever waiting for `/defaults/pid`, a file nothing in the image's
