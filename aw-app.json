@@ -2,7 +2,7 @@
   "manifest_version": 1,
   "id": "kali-linux",
   "name": "Kali Linux",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "A full Kali Linux desktop in your browser. KDE Plasma with Kali's security toolset, opened as a workspace window \u2014 no VNC client, no local install. Everything you change sticks: your home directory, settings and any package you apt-get survive restarts and app updates, and this workspace's repos are mounted read-only so you can open them from a real desktop.",
   "icon": "terminal",
   "tier": "container",
@@ -101,8 +101,8 @@
       },
       "mcp_gateway_config": {
         "type": "string",
-        "title": "MCP Gateway — upstreams JSON",
-        "description": "Overrides this container's OWN standalone MCP gateway's upstream pool — a full {\"mcpServers\": {...}} document, same shape as any mcp.json. Baked default is a single 'playwright' stdio upstream (Chromium at /usr/bin/chromium, headed on the desktop). Set this to add more MCPs alongside it. Changing it recreates the container. This gateway is reached by the WORKSPACE's main MCP Gateway app, federated in automatically as 'aw__kali__playwright__browser_*' tools — it has no published port and is not meant to be edited directly from outside this app."
+        "title": "MCP Gateway \u2014 upstreams JSON",
+        "description": "Overrides this container's OWN standalone MCP gateway's upstream pool \u2014 a full {\"mcpServers\": {...}} document, same shape as any mcp.json. Baked default is a single 'playwright' stdio upstream (Chromium at /usr/bin/chromium, headed on the desktop). Set this to add more MCPs alongside it. Changing it recreates the container. This gateway is reached by the WORKSPACE's main MCP Gateway app, federated in automatically as 'aw__kali__playwright__browser_*' tools \u2014 it has no published port and is not meant to be edited directly from outside this app."
       }
     },
     "required": []
