@@ -1,0 +1,32 @@
+{
+  "layout": "stack",
+  "regions": [
+    {
+      "id": "proxy",
+      "widgets": [
+        {
+          "type": "markdown",
+          "value": "## aw-app-proxy\nRoute the Kali desktop's automation Chromium through this workspace's own aw-app-proxy, the same way aw-app-browser already does. The tool owns persisting this setting inside the Kali container itself — flipping it kills and relaunches the automation browser, picking up the new setting immediately; no restart of this container is needed."
+        },
+        {
+          "type": "toggle",
+          "bind": "GET /api/apps/kali-linux/leaf-tool/proxy_status",
+          "field": "enabled",
+          "action": {"call": "POST /api/apps/kali-linux/leaf-tool/proxy_set"},
+          "label": "Route Chrome through aw-app-proxy",
+          "on_text": "Traffic goes via {proxy_url}. MITM CA: {mitm_ca}.",
+          "off_text": "Chrome connects directly.",
+          "offline_field": "offline",
+          "offline_text": "The Kali container is off — start it below to change this setting."
+        },
+        {
+          "type": "button",
+          "label": "Start Kali container",
+          "action": {
+            "call": "POST /api/components/docker:aw-kali-linux/start"
+          }
+        }
+      ]
+    }
+  ]
+}

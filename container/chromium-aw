@@ -1,0 +1,63 @@
+#!/bin/bash
+# chromium-aw — what @playwright/mcp's --executable-path points at instead
+# of /usr/bin/chromium directly (container/defaults/gateway-mcp.json). Reads
+# the toggle's flag file ONCE PER LAUNCH and, when enabled, injects the exact
+# proxy + MITM-trust flag set aw-app-browser's entrypoint-lite.sh already
+# uses imperatively (entrypoint-lite.sh:280-312) — this is how the Settings
+# toggle takes effect without rewriting the upstream's own command-line spec,
+# a gateway reload, or a container recreate: kali_control's proxy_set just
+# kills the running Chromium, and the next launch comes through here again.
+#
+# Must NEVER fail the launch: a missing/corrupt flag file, a missing
+# certutil, or an unreachable aw-app-proxy (including the installed 0.12.1,
+# which has no MITM endpoints at all) all degrade to a plain or
+# CA-trust-less launch rather than blocking Chrome from starting.
+set -u
+
+FLAG_FILE=/config/aw-proxy/config.json
+REAL_CHROMIUM=/usr/bin/chromium
+HOST="${AW_WORKSPACE_HOST:-127.0.0.1}"
+
+enabled=$(python3 -c "
+import json
+try:
+    with open('${FLAG_FILE}') as f:
+        print('1' if json.load(f).get('enabled') else '0')
+except Exception:
+    print('0')
+" 2>/dev/null)
+
+if [ "${enabled:-0}" != "1" ]; then
+    exec "$REAL_CHROMIUM" "$@"
+fi
+
+# Trust aw-app-proxy's MITM CA — mirror of aw-app-browser's entrypoint-lite.sh
+# (NSS trust-store install as the primary mechanism, SPKI pinning as a
+# parallel fallback for the window before/if the certutil install lands).
+# -f (--fail): the installed 0.12.1 has NO mitm-ca-spki/mitm-ca.pem routes at
+# all, and this proxy's generic forward-proxy handler turns an unroutable GET
+# path into a 502 WITH AN HTML ERROR BODY — plain `curl -s` (no -f) still
+# exits 0 and happily captures that HTML as if it were a real SPKI pin,
+# confirmed live: it lands verbatim as
+# --ignore-certificate-errors-spki-list=<!DOCTYPE HTML>... on the real
+# command line. -f makes curl itself exit non-zero on a 4xx/5xx, so `|| true`
+# correctly degrades to empty instead of garbage.
+MITM_CA_SPKI="$(curl -sf --max-time 3 "http://${HOST}:9124/mitm-ca-spki" || true)"
+NSSDB_DIR="${HOME:-/config}/.pki/nssdb"
+MITM_CA_PEM="$(curl -sf --max-time 3 "http://${HOST}:9124/mitm-ca.pem" || true)"
+if [ -n "${MITM_CA_PEM}" ] && command -v certutil >/dev/null 2>&1; then
+    mkdir -p "${NSSDB_DIR}"
+    [ -f "${NSSDB_DIR}/cert9.db" ] || certutil -N -d "sql:${NSSDB_DIR}" --empty-password
+    echo "${MITM_CA_PEM}" > /tmp/aw-mitm-ca.pem
+    certutil -D -n "aw-mitm-ca" -d "sql:${NSSDB_DIR}" 2>/dev/null || true
+    certutil -A -n "aw-mitm-ca" -t "C,," -i /tmp/aw-mitm-ca.pem -d "sql:${NSSDB_DIR}" \
+        || echo "chromium-aw: certutil failed to install the MITM CA — falling back to SPKI pinning only" >&2
+    rm -f /tmp/aw-mitm-ca.pem
+else
+    echo "chromium-aw: could not fetch MITM CA PEM (installed aw-app-proxy may predate mitm.py) or certutil missing — falling back to SPKI pinning only" >&2
+fi
+
+exec "$REAL_CHROMIUM" "$@" \
+    --proxy-server="${HOST}:9124" \
+    "--proxy-bypass-list=<-loopback>" \
+    "--ignore-certificate-errors-spki-list=${MITM_CA_SPKI}"

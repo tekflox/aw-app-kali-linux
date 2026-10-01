@@ -36,3 +36,7 @@ jobs:
         run: python3 tests/validate_manifest.py aw-app.json --schema .aw-marketplace-schema/schemas/aw-app.schema.json
       - name: Validate mcp.json
         run: python3 tests/validate_mcp_config.py
+      - name: Install test deps
+        run: pip install pytest
+      - name: kali_control unit tests
+        run: python3 -m pytest tests/test_kali_control.py -v

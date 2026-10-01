@@ -7,10 +7,16 @@
       "args": [
         "-y",
         "@playwright/mcp@0.0.77",
-        "--executable-path", "/usr/bin/chromium",
+        "--executable-path", "/usr/local/bin/chromium-aw",
         "--user-data-dir", "/config/aw-playwright-profile",
         "--no-sandbox"
       ]
+    },
+    "kali_control": {
+      "enabled": true,
+      "type": "stdio",
+      "command": "python3",
+      "args": ["/opt/kali-control/server.py"]
     }
   }
 }

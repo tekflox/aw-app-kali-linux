@@ -91,7 +91,7 @@ SCHEMA_PATH = _resolve_schema()
 # in a spec is dead weight that renders nothing.
 KNOWN_WIDGETS = {
     "markdown", "list", "button", "iframe", "app_iframe",
-    "collapsible", "form", "auth_status",
+    "collapsible", "form", "auth_status", "toggle",
 }
 
 # `form` field input types the renderer gives a dedicated control. `select`

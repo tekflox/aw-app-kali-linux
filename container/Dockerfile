@@ -26,7 +26,10 @@ ARG AW_MCP_GATEWAY_REF=v0.39.0
 # and Conflicts: the separate Debian `npm` package (verified by a failed
 # local build: "nodejs Conflicts npm" aborts apt-get outright) — install
 # nodejs alone. python3/venv/pip: runs aw-mcp-gateway's back/. git: one-shot
-# clone below.
+# clone below. curl: chromium-aw fetches the MITM CA/SPKI from aw-app-proxy
+# per launch. libnss3-tools: certutil, for the same wrapper's NSS trust-store
+# install — do not assume the Kali base has it (aw-app-browser's own
+# Dockerfile installs it explicitly for the identical reason).
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       chromium \
@@ -36,6 +39,8 @@ RUN apt-get update && \
       python3-venv \
       python3-pip \
       git \
+      curl \
+      libnss3-tools \
     && rm -rf /var/lib/apt/lists/* \
     && node --version && npm --version
 
@@ -68,6 +73,16 @@ RUN git clone --branch "${AW_MCP_GATEWAY_REF}" --depth 1 \
 # not assume it from other LSIO images.
 COPY --chmod=755 services/aw-mcp-gateway/run /etc/services.d/aw-mcp-gateway/run
 COPY defaults/gateway-mcp.json /defaults/aw-gateway-mcp.json
+
+# kali_control: the second upstream of this container's own gateway (see
+# gateway-mcp.json above) — stdlib-only, so it runs fine on the system
+# python3 rather than needing the gateway's own pinned venv.
+COPY --chmod=755 kali-control/server.py /opt/kali-control/server.py
+
+# chromium-aw: what gateway-mcp.json's playwright entry points
+# --executable-path at instead of /usr/bin/chromium directly — see the
+# wrapper's own header for why.
+COPY --chmod=755 chromium-aw /usr/local/bin/chromium-aw
 
 # Documentation only on a user-defined podman network (does not publish or
 # restrict anything) — the workspace's main gateway reaches this by

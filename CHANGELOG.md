@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+Feature: Kali Settings gains a toggle to route the automation Chromium
+through **aw-app-proxy**, same as `aw-app-browser` already does. A new
+stdlib-only stdio MCP server, `kali_control`, joins the leaf gateway as a
+second upstream alongside `playwright` (`aw__kali__aw__kali_control__proxy_*`)
+exposing `proxy_set`/`proxy_status`; state persists to
+`/config/aw-proxy/config.json` (survives container restart). A new Chromium
+wrapper, `/usr/local/bin/chromium-aw`, is what `@playwright/mcp`'s
+`--executable-path` now points at — it reads the flag at every launch and, if
+enabled, injects the proxy + MITM-trust flags, mirroring
+`aw-app-browser/container/entrypoint-lite.sh`. Flipping the toggle kills the
+running automation Chromium (matched strictly on
+`--user-data-dir=/config/aw-playwright-profile`, never the KDE desktop);
+`@playwright/mcp` relaunches it lazily on the next tool call — no gateway
+reload, no container recreate. The Settings UI reaches these tools directly
+via `aw-workspace` core's new `GET|POST /api/apps/{slug}/leaf-tool/{tool}`
+bridge and a new `toggle` declarative widget, rather than the usual
+`config_schema`+save flow — an offline container shows an explanatory
+message instead of a dead switch. Works against the installed aw-app-proxy
+0.12.1 (plain CONNECT splice, no MITM yet); see
+`.tmp/kali-proxy-toggle-design/ADR-kali-proxy-toggle.md` for the full design
+and rejected alternatives.
+
 Feature: Kali becomes the workspace's default **automation browser**. This
 repo now derives its own image instead of using the stock one as-is —
 `container/Dockerfile` adds Chromium, a pinned `@playwright/mcp@0.0.77`, and
