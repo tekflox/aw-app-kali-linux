@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+Feature: Kali becomes the workspace's default **automation browser**. This
+repo now derives its own image instead of using the stock one as-is —
+`container/Dockerfile` adds Chromium, a pinned `@playwright/mcp@0.0.77`, and
+a pinned checkout of [`aw-mcp-gateway`](https://github.com/tekflox/aw-mcp-gateway)'s
+`back/` running as a long-running s6 service on `:9200`. The workspace's
+MAIN MCP Gateway federates that leaf gateway in as a `type: gateway` upstream
+(new root `mcp.json`), so Kali's Playwright tools surface on every agent
+session as `aw__kali__playwright__browser_*` — no `docker exec` needed.
+Origin: a manually-piloted, headed Chromium inside this desktop reached
+Google's password prompt with zero automation-detection rejection, where
+`aw-app-browser`'s headless Chromium was rejected outright; see the ADR
+(Kanban `feature:kali-standalone-mcp-gateway-playwright`) for the full design
+and rejected alternatives.
+
+The leaf gateway runs `require_token: false` (new opt-in in
+`aw-mcp-gateway` v0.39.0+) — reachable only from sibling containers on the
+podman app network, never published, same trust posture as
+`aw-app-browser`'s unauthenticated CDP on `:9223`. New `mcp_gateway_config`
+Settings field overrides the leaf's upstream pool (baked default: just
+`playwright`) without a rebuild.
+
+`custom-cont-init.d/*` is unchanged by this work — the s6 service that boots
+the leaf gateway is a separate, new long-running service
+(`/etc/services.d/aw-mcp-gateway`, not `/custom-services.d` — this base image
+has no such directory, confirmed against the live container).
+
 Fix: `/config` ownership drift silently blocking writes (e.g. plasmashell
 refusing to start with "Configuration file ... not writable"). linuxserver.io
 images chown `/config` to PUID:PGID exactly once, on first boot, and never
