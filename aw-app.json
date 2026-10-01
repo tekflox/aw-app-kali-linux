@@ -102,7 +102,7 @@
       "mcp_gateway_config": {
         "type": "string",
         "title": "MCP Gateway \u2014 upstreams JSON",
-        "description": "Overrides this container's OWN standalone MCP gateway's upstream pool \u2014 a full {\"mcpServers\": {...}} document, same shape as any mcp.json. Baked default is a single 'playwright' stdio upstream (Chromium at /usr/bin/chromium, headed on the desktop). Set this to add more MCPs alongside it. Changing it recreates the container. This gateway is reached by the WORKSPACE's main MCP Gateway app, federated in automatically as 'aw__kali__playwright__browser_*' tools \u2014 it has no published port and is not meant to be edited directly from outside this app."
+        "description": "Overrides this container's OWN standalone MCP gateway's upstream pool \u2014 a full {\"mcpServers\": {...}} document, same shape as any mcp.json. Baked default is a single 'playwright' stdio upstream (Chromium at /usr/bin/chromium, headed on the desktop). Set this to add more MCPs alongside it. Changing it recreates the container. This gateway is reached by the WORKSPACE's main MCP Gateway app, federated in automatically as 'aw__kali__aw__playwright__browser_*' tools \u2014 it has no published port and is not meant to be edited directly from outside this app."
       }
     },
     "required": []

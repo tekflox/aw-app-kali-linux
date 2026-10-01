@@ -12,7 +12,9 @@ MCP, and a pinned checkout of [`aw-mcp-gateway`](https://github.com/tekflox/aw-m
 `back/` running as a long-running s6 service on `:9200` — the workspace's
 MAIN MCP Gateway federates it in as a `type: gateway` upstream (root
 `mcp.json`), so Kali's Playwright tools show up on every agent session as
-`aw__kali__playwright__browser_*`, with no `docker exec` needed. See
+`aw__kali__aw__playwright__browser_*` (the leaf's own tools are already
+namespaced `aw__playwright__*` before the parent gateway adds `kali__`), with
+no `docker exec` needed. See
 `docs/architecture/aw-app-kali-linux.md` and the ADR this implements
 (Kanban `feature:kali-standalone-mcp-gateway-playwright`) for the full
 design and the alternatives rejected.

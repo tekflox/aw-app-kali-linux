@@ -9,7 +9,7 @@ a pinned checkout of [`aw-mcp-gateway`](https://github.com/tekflox/aw-mcp-gatewa
 `back/` running as a long-running s6 service on `:9200`. The workspace's
 MAIN MCP Gateway federates that leaf gateway in as a `type: gateway` upstream
 (new root `mcp.json`), so Kali's Playwright tools surface on every agent
-session as `aw__kali__playwright__browser_*` — no `docker exec` needed.
+session as `aw__kali__aw__playwright__browser_*` — no `docker exec` needed.
 Origin: a manually-piloted, headed Chromium inside this desktop reached
 Google's password prompt with zero automation-detection rejection, where
 `aw-app-browser`'s headless Chromium was rejected outright; see the ADR

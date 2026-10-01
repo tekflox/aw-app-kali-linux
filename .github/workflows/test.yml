@@ -1,0 +1,38 @@
+name: Test
+
+# Validates aw-app.json and mcp.json before anything gets built — catches a
+# bad manifest or a misconfigured federated gateway upstream without waiting
+# on the (expensive, baremetal-only) image build in build.yml. Runs on every
+# push/PR, unlike build.yml which only fires for release-bump commits or a
+# manual dispatch.
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch: {}
+
+jobs:
+  validate:
+    runs-on: [self-hosted, aw-baremetal]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install deps
+        run: pip install jsonschema
+      # tests/validate_manifest.py falls back to a sibling aw-marketplace
+      # checkout for the canonical schema when this repo has no local
+      # schemas/ copy (by design, see the script's own docstring). A real
+      # sibling checkout isn't possible on a runner (actions/checkout refuses
+      # a `path` outside $GITHUB_WORKSPACE), so check it out into a
+      # subdirectory instead and point --schema at it explicitly — same
+      # pattern as aw-app-template/.github/workflows/test.yml.
+      - uses: actions/checkout@v4
+        with:
+          repository: tekflox/aw-marketplace
+          path: .aw-marketplace-schema
+      - name: Validate manifest
+        run: python3 tests/validate_manifest.py aw-app.json --schema .aw-marketplace-schema/schemas/aw-app.schema.json
+      - name: Validate mcp.json
+        run: python3 tests/validate_mcp_config.py
