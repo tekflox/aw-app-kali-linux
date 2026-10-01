@@ -12,10 +12,10 @@
   "resource_estimate": {
     "cpu": "high",
     "memory": "~2 GB",
-    "disk": "~8 GB"
+    "disk": "~10 GB"
   },
   "runtime": {
-    "image": "lscr.io/linuxserver/kali-linux:latest",
+    "image": "ghcr.io/tekflox/aw-app-kali-linux:latest",
     "port": 3500,
     "resources": {
       "cpus": 2,
@@ -28,7 +28,8 @@
       "CUSTOM_PORT": "3500",
       "PUID": "${data.uid}",
       "PGID": "${data.gid}",
-      "TZ": "${config.timezone}"
+      "TZ": "${config.timezone}",
+      "AW_KALI_MCP_CONFIG": "${config.mcp_gateway_config}"
     },
     "volumes": [
       {
@@ -97,6 +98,11 @@
         "default": "America/New_York",
         "title": "Timezone",
         "description": "IANA timezone for the desktop session (e.g. America/Sao_Paulo). Changing it recreates the container."
+      },
+      "mcp_gateway_config": {
+        "type": "string",
+        "title": "MCP Gateway — upstreams JSON",
+        "description": "Overrides this container's OWN standalone MCP gateway's upstream pool — a full {\"mcpServers\": {...}} document, same shape as any mcp.json. Baked default is a single 'playwright' stdio upstream (Chromium at /usr/bin/chromium, headed on the desktop). Set this to add more MCPs alongside it. Changing it recreates the container. This gateway is reached by the WORKSPACE's main MCP Gateway app, federated in automatically as 'aw__kali__playwright__browser_*' tools — it has no published port and is not meant to be edited directly from outside this app."
       }
     },
     "required": []

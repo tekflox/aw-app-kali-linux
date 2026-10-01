@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "enabled": true,
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@0.0.77",
+        "--executable-path", "/usr/bin/chromium",
+        "--user-data-dir", "/config/aw-playwright-profile",
+        "--no-sandbox"
+      ]
+    }
+  }
+}

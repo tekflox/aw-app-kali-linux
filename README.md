@@ -5,19 +5,31 @@ aw-workspace app. Port of the `agentic-workspace` monolith's `aw-kali` docker
 service (`src/config/aw.json` → `docker_services[] name: "aw-kali"`, exposed
 in the UI as the workspace app `id: "linux"`, label **Linux**).
 
-The container is used **as-is** — stock
-`lscr.io/linuxserver/kali-linux:latest`, no derived image, no build step in
-this repo. Everything this app adds is manifest-level: the port, the binds,
-the resource envelope and the window.
+Kali became the workspace's default **automation browser** (not just a
+desktop): this repo now derives its own image, `FROM
+lscr.io/linuxserver/kali-linux:latest` plus Chromium, a pinned Playwright
+MCP, and a pinned checkout of [`aw-mcp-gateway`](https://github.com/tekflox/aw-mcp-gateway)'s
+`back/` running as a long-running s6 service on `:9200` — the workspace's
+MAIN MCP Gateway federates it in as a `type: gateway` upstream (root
+`mcp.json`), so Kali's Playwright tools show up on every agent session as
+`aw__kali__playwright__browser_*`, with no `docker exec` needed. See
+`docs/architecture/aw-app-kali-linux.md` and the ADR this implements
+(Kanban `feature:kali-standalone-mcp-gateway-playwright`) for the full
+design and the alternatives rejected.
 
 ## Layout
 
 ```
-aw-app.json              the whole app — Tier-2 container manifest
+aw-app.json                   the whole app — Tier-2 container manifest
+mcp.json                      registers this app's OWN gateway as a federated upstream
+container/Dockerfile          the derived image (Chromium + Playwright MCP + aw-mcp-gateway)
+container/services/           s6 long-running service that boots the leaf gateway
+container/defaults/           baked default upstream pool for the leaf gateway (playwright)
+custom-cont-init.d/           one-shot root hooks (UNCHANGED by the gateway work above)
 skills/aw-kali-linux/         SKILL.md contributed to the workspace skills index
-schemas/                 manifest JSON Schema (mirrored from aw-app-template)
-tests/validate_manifest.py
-.github/workflows/       release → aw-marketplace catalog sync
+schemas/                      manifest JSON Schema (mirrored from aw-app-template)
+tests/
+.github/workflows/            build (image) + release (→ aw-marketplace catalog sync)
 ```
 
 ## Manifest at a glance
@@ -25,12 +37,13 @@ tests/validate_manifest.py
 | | |
 |---|---|
 | tier | `container` (Tier-2) |
-| image | `lscr.io/linuxserver/kali-linux:latest` |
-| port | 3500 (`CUSTOM_PORT`) |
+| image | `ghcr.io/tekflox/aw-app-kali-linux:latest` (derived — see Dockerfile) |
+| port | 3500 (`CUSTOM_PORT`) — the desktop; the leaf gateway's `:9200` is unpublished, reached by container name only |
 | run flags | `--shm-size=1g` |
 | resources | 2 CPU / 4096 MB |
 | permissions | `containers:manage`, `fs:workspace-data` |
 | window | `managed_app` / `kind: web` → the KasmVNC desktop at `/` |
+| settings | `mcp_gateway_config` — override the leaf gateway's upstream pool (JSON) |
 
 ### Volumes
 

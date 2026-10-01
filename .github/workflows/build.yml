@@ -1,0 +1,117 @@
+name: Build Kali Linux image
+
+# Builds the Kali Linux desktop + MCP gateway image and pushes it to
+# ghcr.io/<owner>/aw-app-kali-linux. Push builds run only for release bump
+# commits so `latest` follows the tagged manifest release. Manual rebuilds
+# remain available via workflow_dispatch.
+#
+#   gh workflow run build.yml                        # amd64 only (default)
+#   gh workflow run build.yml -f include_arm64=true   # also linux/arm64 (QEMU, slow)
+#
+# Deviation from aw-app-browser's build.yml (which defaults to BOTH
+# platforms): this base image is ~8 GB uncompressed before this repo adds
+# Chromium/Node/the gateway venv on top, and the workspace host this image
+# actually runs on is amd64 — QEMU-emulated arm64 on a base this size is
+# prohibitive as a default. arm64 stays available as an explicit opt-in.
+#
+# One-time manual step after the FIRST push: the package is created private
+# regardless of this repo's own visibility, and GitHub has no REST/GraphQL
+# endpoint to change a container package's visibility (confirmed on
+# aw-app-browser, 2026-07-28: PATCH /orgs/tekflox/packages/container/... ->
+# 404 with a token that can GET the package fine — the endpoint simply
+# doesn't exist for packages). This blocks the "public app = tokenless
+# install" policy until someone with org admin flips it by hand:
+#   github.com/orgs/tekflox/packages/container/aw-app-kali-linux/settings
+#   -> Package settings -> Danger Zone -> Change visibility -> Public
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      include_arm64:
+        description: 'Also build linux/arm64 (QEMU emulation; slower)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: build-aw-app-kali-linux-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[skip release]')) }}
+    name: aw-app-kali-linux
+    runs-on: [self-hosted, aw-baremetal]
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.include_arm64 == true }}
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ghcr.io rejects mixed-case namespaces — lowercase the owner login.
+      - name: Lowercase repo owner
+        id: owner
+        run: echo "lc=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve platforms
+        id: plat
+        run: |
+          # amd64-only by default (see header comment) — arm64 is an
+          # explicit opt-IN via manual dispatch, inverse of aw-app-browser.
+          if [ "${{ github.event_name == 'workflow_dispatch' && inputs.include_arm64 == true }}" = "true" ]; then
+            echo "platforms=linux/amd64,linux/arm64" >> "$GITHUB_OUTPUT"
+          else
+            echo "platforms=linux/amd64" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Read app version
+        id: version
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          print(f"version={json.load(open('aw-app.json'))['version']}")
+          PY
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: container
+          file: container/Dockerfile
+          platforms: ${{ steps.plat.outputs.platforms }}
+          push: true
+          tags: |
+            ghcr.io/${{ steps.owner.outputs.lc }}/aw-app-kali-linux:latest
+            ghcr.io/${{ steps.owner.outputs.lc }}/aw-app-kali-linux:v${{ steps.version.outputs.version }}
+            ghcr.io/${{ steps.owner.outputs.lc }}/aw-app-kali-linux:${{ github.sha }}
+          cache-from: type=registry,ref=ghcr.io/${{ steps.owner.outputs.lc }}/aw-app-kali-linux:buildcache
+          cache-to: type=registry,ref=ghcr.io/${{ steps.owner.outputs.lc }}/aw-app-kali-linux:buildcache,mode=max
+
+      - name: Summary
+        run: |
+          {
+            echo "## 🐳 aw-app-kali-linux pushed"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| **Image** | \`ghcr.io/${{ steps.owner.outputs.lc }}/aw-app-kali-linux:latest\` |"
+            echo "| **Version tag** | \`ghcr.io/${{ steps.owner.outputs.lc }}/aw-app-kali-linux:v${{ steps.version.outputs.version }}\` |"
+            echo "| **Platforms** | ${{ steps.plat.outputs.platforms }} |"
+            echo ""
+            echo "⚠️ **Manual step required**: on the FIRST push of this image, GHCR creates the package PRIVATE regardless of this repo's visibility. An org admin must flip it public by hand (Package settings → Danger Zone → Change visibility → Public) or the marketplace install's unauthenticated pull will fail."
+          } >> "$GITHUB_STEP_SUMMARY"

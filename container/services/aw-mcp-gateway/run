@@ -1,0 +1,72 @@
+#!/usr/bin/with-contenv bash
+# Long-running s6 service — s6-overlay v3's built-in conversion of
+# /etc/services.d/<name>/run into a supervised, auto-restarted longrun (see
+# container/Dockerfile's comment: this base image has no /custom-services.d
+# wrapper, only this generic mechanism). Boots THIS container's own
+# standalone aw-mcp-gateway, fronting Playwright MCP, on :9200 — independent
+# of the KDE/Selkies desktop, so the workspace's main gateway's federation
+# dial has something to connect to within seconds of container start.
+# @playwright/mcp launches its browser lazily at the first tool call, so
+# DISPLAY is only needed by then, not here.
+set -e
+
+CONF_DIR=/config/aw-mcp-gateway
+mkdir -p "$CONF_DIR"
+
+# require_token:false — this leaf is reachable only from sibling containers
+# on the podman app network (no published port), and has no automated way to
+# bridge a minted token into the parent's static package mcp.json (see
+# aw-mcp-gateway's README "Auth decision"). "upstreams" stays unset here —
+# AW_MCP_GATEWAY_ALLOW=* below allow-lists whatever mcp.custom.json ends up
+# declaring instead of a name baked into this file.
+cat > "$CONF_DIR/gateway.json" <<'JSON'
+{"port": 9200, "require_token": false}
+JSON
+
+# The upstream pool for THIS container's own gateway (today: playwright) —
+# overridable via AW_KALI_MCP_CONFIG (aw-app.json's mcp_gateway_config
+# Settings field) so more MCPs can join later without a rebuild.
+if [ -n "${AW_KALI_MCP_CONFIG:-}" ]; then
+  printf '%s' "$AW_KALI_MCP_CONFIG" > "$CONF_DIR/mcp.custom.json"
+else
+  cp /defaults/aw-gateway-mcp.json "$CONF_DIR/mcp.custom.json"
+fi
+
+# A SingletonLock left by an unclean container stop/crash makes Chromium
+# refuse every future launch ("Browser is already in use for
+# /config/aw-playwright-profile") even though the process it names is long
+# dead — reproduced live. Safe to clear unconditionally here: this script
+# runs once at container boot, strictly before npx/chromium are spawned
+# again, so any lock found at this point cannot belong to a live process.
+rm -f /config/aw-playwright-profile/SingletonLock \
+      /config/aw-playwright-profile/SingletonCookie \
+      /config/aw-playwright-profile/SingletonSocket
+
+chown -R abc:abc "$CONF_DIR"
+
+export AW_GATEWAY_JSON="$CONF_DIR/gateway.json"
+# AW_MCP_JSON is this gateway's own write-only merged-config cache (scanned +
+# custom) — never a source of upstreams on its own, so the actual pool goes
+# into AW_MCP_CUSTOM_JSON instead (config.py's scan_app_mcp_servers() has
+# nothing to scan here: there is no /opt/aw-workspace/apps inside Kali).
+export AW_MCP_JSON="$CONF_DIR/mcp.json"
+export AW_MCP_CUSTOM_JSON="$CONF_DIR/mcp.custom.json"
+# Neutralises register_self_in_host_mcp_json() — must not scribble a
+# /host-mcp.json inside Kali, there is no host .mcp.json to register into.
+export AW_HOST_MCP_JSON=
+# DEFAULT_ALLOW is empty by design (server.py) — a custom-sourced upstream
+# needs an explicit allow-list entry or it's defined but never started.
+# "*" allows every enabled stdio server mcp.custom.json ends up declaring,
+# so adding a second MCP via AW_KALI_MCP_CONFIG needs no allow-list edit too.
+export AW_MCP_GATEWAY_ALLOW='*'
+# Hard-set, NOT a ${DISPLAY:-:0} fallback: with-contenv pre-populates DISPLAY
+# from s6's own /var/run/s6/container_environment/DISPLAY, which on this
+# image is baked to ":1" — stale, nothing ever listens there (verified live:
+# xdpyinfo on :1 fails outright). Xwayland actually runs on ":0"
+# (/tmp/.X11-unix/X0, confirmed working via xdpyinfo) — a ${VAR:-default}
+# never overrides an already-set, wrong value, so this must be an
+# unconditional assignment.
+export DISPLAY=:0
+
+cd /opt/aw-mcp-gateway/back
+exec s6-setuidgid abc /opt/aw-mcp-gateway/.venv/bin/python -m gateway.server --port 9200

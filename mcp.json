@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "kali": {
+      "enabled": true,
+      "type": "gateway",
+      "url": "http://aw-app-kali-linux:9200/mcp"
+    }
+  }
+}
