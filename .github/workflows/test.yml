@@ -38,5 +38,10 @@ jobs:
         run: python3 tests/validate_mcp_config.py
       - name: Install test deps
         run: pip install pytest
-      - name: kali_control unit tests
-        run: python3 -m pytest tests/test_kali_control.py -v
+      - name: Unit tests
+        # Whole tests/ dir, not a single file by name — a file named by
+        # name here silently stops running the moment a new tests/test_*.py
+        # is added (confirmed: test_cdp_proxy.py would have bypassed this
+        # fast pre-build check entirely, only ever caught by the slower
+        # release workflow's own unconditional `pytest tests/`).
+        run: python3 -m pytest tests/ -v
