@@ -18,6 +18,26 @@ FLAG_FILE=/config/aw-proxy/config.json
 REAL_CHROMIUM=/usr/bin/chromium
 HOST="${AW_WORKSPACE_HOST:-127.0.0.1}"
 
+# Every launch now exposes CDP on :9222 (see the two execs below) — but
+# @playwright/mcp only starts Chromium lazily, on its first tool call, and
+# aw-app-proxy's own cookie reconcile loop only polls every 15s. Without
+# this, the first navigation right after a cold launch could run for up to
+# 15s before synced cookies actually land. Background a detached one-shot
+# that waits for THIS launch's CDP to come up, then triggers a re-push —
+# capped at ~30s and never allowed to fail the real launch below (same rule
+# as the MITM-trust steps further down), and unconditional (proxy toggle
+# on/off) since cookie delivery must work either way.
+(
+    for _ in $(seq 1 30); do
+        if curl -sf --max-time 1 "http://127.0.0.1:9222/json/list" >/dev/null 2>&1; then
+            curl -sf --max-time 3 -X POST "http://${HOST}:9124/restore-cookies" >/dev/null 2>&1 || true
+            break
+        fi
+        sleep 1
+    done
+) &
+disown
+
 enabled=$(python3 -c "
 import json
 try:
@@ -28,7 +48,7 @@ except Exception:
 " 2>/dev/null)
 
 if [ "${enabled:-0}" != "1" ]; then
-    exec "$REAL_CHROMIUM" "$@"
+    exec "$REAL_CHROMIUM" "$@" --remote-debugging-port=9222
 fi
 
 # Trust aw-app-proxy's MITM CA — mirror of aw-app-browser's entrypoint-lite.sh
@@ -60,4 +80,5 @@ fi
 exec "$REAL_CHROMIUM" "$@" \
     --proxy-server="${HOST}:9124" \
     "--proxy-bypass-list=<-loopback>" \
-    "--ignore-certificate-errors-spki-list=${MITM_CA_SPKI}"
+    "--ignore-certificate-errors-spki-list=${MITM_CA_SPKI}" \
+    --remote-debugging-port=9222

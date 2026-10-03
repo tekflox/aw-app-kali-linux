@@ -74,6 +74,14 @@ RUN git clone --branch "${AW_MCP_GATEWAY_REF}" --depth 1 \
 COPY --chmod=755 services/aw-mcp-gateway/run /etc/services.d/aw-mcp-gateway/run
 COPY defaults/gateway-mcp.json /defaults/aw-gateway-mcp.json
 
+# cdp-proxy: a second s6 longrun, same mechanism as aw-mcp-gateway above —
+# exposes this container's own Chromium's CDP on :9223 (HTTP-aware Host
+# rewrite, same pattern aw-app-browser already uses) so aw-app-proxy's
+# multi-target cookie push can reach it, and so this container is pilotable
+# over CDP by name like aw-app-browser already is.
+COPY --chmod=755 services/aw-cdp-proxy/run /etc/services.d/aw-cdp-proxy/run
+COPY cdp-proxy/cdp_proxy.py /opt/aw-kali/cdp_proxy.py
+
 # kali_control: the second upstream of this container's own gateway (see
 # gateway-mcp.json above) — stdlib-only, so it runs fine on the system
 # python3 rather than needing the gateway's own pinned venv.
@@ -87,4 +95,4 @@ COPY --chmod=755 chromium-aw /usr/local/bin/chromium-aw
 # Documentation only on a user-defined podman network (does not publish or
 # restrict anything) — the workspace's main gateway reaches this by
 # container name, never through a host-published port.
-EXPOSE 9200
+EXPOSE 9200 9223

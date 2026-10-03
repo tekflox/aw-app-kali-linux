@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+Feature: this container's own Chromium now receives cookies synced via the
+aw-sync browser extension, not just `aw-app-browser`'s. `chromium-aw` adds
+`--remote-debugging-port=9222` to every launch (unconditional — works with
+the proxy toggle off, and alongside `@playwright/mcp`'s own
+`--remote-debugging-pipe`, verified live), and a second s6 longrun,
+`aw-cdp-proxy` (`container/cdp-proxy/cdp_proxy.py`, a copy of
+`aw-app-browser`'s own CDP proxy), exposes it on `:9223` by container name
+— same pattern `aw-app-browser` already uses, so `aw-app-proxy`'s cookie
+push can reach it as a second target alongside the interactive browser.
+Closes the lazy-launch gap (`@playwright/mcp` only starts Chromium on its
+first tool call): `chromium-aw` also backgrounds a one-shot that waits for
+this launch's CDP to come up, then triggers `aw-app-proxy`'s
+`POST /restore-cookies` to re-push every persisted cookie immediately,
+instead of waiting up to 15s for the proxy's own reconcile tick. Requires
+`aw-app-proxy` 0.16.0+ (multi-target cookie push); see
+`.tmp/kali-cookie-sync-design/ADR-kali-cookie-sync.md` for the full design
+and rejected alternatives.
+
 Feature: Kali Settings gains a toggle to route the automation Chromium
 through **aw-app-proxy**, same as `aw-app-browser` already does. A new
 stdlib-only stdio MCP server, `kali_control`, joins the leaf gateway as a

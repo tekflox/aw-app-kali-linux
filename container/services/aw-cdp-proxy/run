@@ -1,0 +1,20 @@
+#!/usr/bin/with-contenv bash
+# Long-running s6 service — s6-overlay v3's built-in conversion of
+# /etc/services.d/<name>/run into a supervised, auto-restarted longrun (see
+# container/Dockerfile's comment on services/aw-mcp-gateway/run, which this
+# mirrors). Boots the HTTP-aware CDP proxy (cdp_proxy.py) that rewrites
+# Chrome's remote-debugging Host header so this container's Chromium is
+# reachable by name (aw-app-kali-linux:9223) from sibling containers —
+# aw-app-proxy's cookie push, the main gateway's federation dial — the same
+# way aw-app-browser already exposes its own Chromium on :9223.
+#
+# chromium-aw (the Playwright executable-path wrapper) adds
+# --remote-debugging-port=9222 on every launch, independent of this proxy —
+# this service can start before Chromium ever does; cdp_proxy.py's connect
+# to 127.0.0.1:9222 just fails per-request (not a crash loop) until it has.
+set -e
+
+export AW_CDP_PROXY_PORT=9223
+export AW_CDP_EXTERNAL_HOST_PORT="${AW_CDP_EXTERNAL_HOST_PORT:-aw-app-kali-linux:9223}"
+
+exec s6-setuidgid abc python3 /opt/aw-kali/cdp_proxy.py
