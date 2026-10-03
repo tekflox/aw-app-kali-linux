@@ -1,6 +1,6 @@
 ---
 name: aw-kali-linux
-description: The Kali Linux app — a full KDE desktop running in the browser as a Tier-2 aw-workspace container (stock lscr.io/linuxserver/kali-linux image). Covers what is mounted where, what survives a container recreation, how to install packages or add boot hooks so they persist, and the device limits (no webcam/GPU passthrough) that come from running it as an app instead of a compose service. Load this whenever a task involves the Kali Linux desktop window, or when something in that desktop was lost after an update.
+description: The Kali Linux app — a full KDE desktop running in the browser as a Tier-2 aw-workspace container (stock lscr.io/linuxserver/kali-linux image). Covers what is mounted where, what survives a container recreation, how to install packages or add boot hooks so they persist, the device limits (no webcam/GPU passthrough) that come from running it as an app instead of a compose service, and the app's own federated MCP tools — Playwright browser automation (`aw__kali__aw__playwright__*`) and the `kali_control` aw-app-proxy routing toggle (`aw__kali__aw__kali_control__*`). Load this whenever a task involves the Kali Linux desktop window, piloting its automation browser, the proxy toggle, or when something in that desktop was lost after an update.
 ---
 
 # Kali Linux — the browser desktop
@@ -127,6 +127,72 @@ today. Don't spend time looking for the manifest key — it isn't there.
    **read-only** on purpose. Anything you need to write, write under
    `/config`; to hand a file to the rest of the workspace, use the shared
    scratch dir conventions (`.tmp/`) from a workspace-side session instead.
+
+## MCP tools
+
+This app runs its own standalone MCP gateway (container port `:9200`,
+`require_token: false` — reachable only from sibling containers on the
+podman app network, never published) that the workspace's main gateway
+federates in. Every tool below surfaces on any agent session as
+`aw__kali__aw__<leaf>__<tool>` — no `docker exec` needed, same pattern as
+every other federated leaf gateway in this workspace. Two upstreams,
+declared in `container/defaults/gateway-mcp.json` (overridable per-install
+via the `mcp_gateway_config` Settings field, no rebuild needed):
+
+### `playwright` — browser automation (`aw__kali__aw__playwright__*`)
+
+Pinned `@playwright/mcp@0.0.77`, driving **this container's own headed
+Chromium** (`/usr/local/bin/chromium-aw`, profile
+`/config/aw-playwright-profile`) inside the live KDE desktop — not a hidden
+headless browser. This is the workspace's default automation browser for a
+reason: a real, visible Chromium inside a real desktop session reaches
+Google's password prompt with zero automation-detection rejection, where
+`aw-app-browser`'s headless Chromium gets rejected outright.
+
+| Tool | What it does |
+|---|---|
+| `browser_navigate` | Go to a URL |
+| `browser_navigate_back` | Back button |
+| `browser_snapshot` | Accessibility-tree snapshot of the page — the usual way to "see" it before acting |
+| `browser_click` | Click an element |
+| `browser_hover` | Hover an element |
+| `browser_drag` / `browser_drop` | Drag-and-drop |
+| `browser_type` | Type into a focused element |
+| `browser_press_key` | Send a single key |
+| `browser_select_option` | Pick from a `<select>` |
+| `browser_fill_form` | Fill multiple fields in one call |
+| `browser_file_upload` | Attach a file to a file input |
+| `browser_handle_dialog` | Accept/dismiss a JS `alert`/`confirm`/`prompt` |
+| `browser_tabs` | List / open / close / switch tabs |
+| `browser_resize` | Resize the browser window/viewport |
+| `browser_wait_for` | Wait for text, a time delay, or an element |
+| `browser_take_screenshot` | PNG/JPEG screenshot |
+| `browser_console_messages` | Read the JS console |
+| `browser_network_requests` / `browser_network_request` | List / inspect network traffic |
+| `browser_evaluate` | Run JS in the page |
+| `browser_run_code_unsafe` | Run arbitrary JS/Node with no sandboxing — use sparingly |
+| `browser_close` | Close the browser |
+
+### `kali_control` — aw-app-proxy routing toggle (`aw__kali__aw__kali_control__*`)
+
+A tiny stdlib-only stdio server baked into the image
+(`container/kali-control/server.py`), exposing exactly two tools that
+control whether the automation Chromium above is routed through this
+workspace's **aw-app-proxy** — same mechanism `aw-app-browser` already
+uses, and the thing that also lets the aw-sync browser extension's cookie
+push reach this container's Chromium (mirrored on `:9223` via its own
+`aw-cdp-proxy`, same pattern as `aw-app-browser`'s CDP proxy).
+
+| Tool | What it does |
+|---|---|
+| `proxy_set(enabled, restart_browser=true)` | Flip the flag, persisted to `/config/aw-proxy/config.json` (survives container restart). By default also SIGTERMs the profile-matched Chromium (matched strictly on its `--user-data-dir`, never the KDE desktop's own browser) so `@playwright/mcp` relaunches it lazily on the next tool call with the new setting applied — no gateway reload, no container recreate. |
+| `proxy_status()` | `{enabled, effective, pending_browser_restart, proxy_reachable, mitm_ca, proxy_url}` — the persisted flag vs. what a currently-running browser actually has applied, whether aw-app-proxy answers at all, and MITM CA trust state (`installed` / `available` / `absent`). |
+
+The Settings UI has the same switch (the `proxy` region in
+`windows/settings.json`), wired through the core
+`GET|POST /api/apps/kali-linux/leaf-tool/{tool}` bridge — it calls the exact
+same two tools, not a separate mechanism, so flipping it from an agent
+session and from the UI stay in sync.
 
 ## Config
 
