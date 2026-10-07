@@ -1,6 +1,6 @@
 ---
 name: aw-kali-linux
-description: The Kali Linux app — a full KDE desktop running in the browser as a Tier-2 aw-workspace container (stock lscr.io/linuxserver/kali-linux image). Covers what is mounted where, what survives a container recreation, how to install packages or add boot hooks so they persist, the device limits (no webcam/GPU passthrough) that come from running it as an app instead of a compose service, and the app's own federated MCP tools — Playwright browser automation (`aw__kali__aw__playwright__*`) and the `kali_control` aw-app-proxy routing toggle (`aw__kali__aw__kali_control__*`). Load this whenever a task involves the Kali Linux desktop window, piloting its automation browser, the proxy toggle, or when something in that desktop was lost after an update.
+description: The Kali Linux app — a full KDE desktop running in the browser as a Tier-2 aw-workspace container (stock lscr.io/linuxserver/kali-linux image). Covers what is mounted where, what survives a container recreation, how to install packages or add boot hooks so they persist, the device limits (no webcam/GPU passthrough) that come from running it as an app instead of a compose service, and the app's own federated MCP tools — Playwright browser automation (`aw__kali__aw__playwright__*`) and the `kali_control` aw-app-proxy routing toggle (`aw__kali__aw__kali_control__*`). In this workspace it is also the ONLY browser automation that actually works — `aw-app-browser` is not installed, so `aw__mini_browser__*`, `aw__devctl_browser__*` and the top-level `aw__playwright__*` all fail at call time even though the gateway lists them. Load this whenever a task involves the Kali Linux desktop window, piloting its automation browser, the proxy toggle, when something in that desktop was lost after an update, or when you need to pick a browser MCP and want the one that answers.
 ---
 
 # Kali Linux — the browser desktop
@@ -148,6 +148,36 @@ headless browser. This is the workspace's default automation browser for a
 reason: a real, visible Chromium inside a real desktop session reaches
 Google's password prompt with zero automation-detection rejection, where
 `aw-app-browser`'s headless Chromium gets rejected outright.
+
+#### In this workspace it is also the ONLY browser automation that works
+
+Measured live 2026-10-06. **`aw-app-browser` is not installed here** —
+`aw-workspace-cli apps` lists `proxy`, `kali-linux`, `devctl`,
+`mini-browser`, and no `browser`. Every other browser MCP in this
+workspace is a CDP *client* of that missing container, so they all fail at
+call time rather than at discovery time:
+
+| Tool family | What happens when you call it |
+|---|---|
+| `aw__kali__aw__playwright__*` | **works** — drives this container's own Chromium, no dependency on `aw-app-browser` |
+| `aw__mini_browser__browser_*` | `aw-app-browser not reachable over CDP (:9223) and could not be started` |
+| `aw__devctl_browser__browser_*` | same — `devctl_app.cdp` points at the same absent container |
+| `aw__playwright__*` (top-level) | configured against `aw-app-browser`'s CDP endpoint; unreachable for the same reason |
+
+**The trap is that all of them are listed by the gateway.** `tools/list`
+reports a tool whenever its MCP server is up; it says nothing about whether
+that server's *backend* exists. `mini-browser` and `devctl` are installed
+and their MCP servers answer fine — they just have nothing to drive. So a
+tool appearing in your tool list is not evidence it can do anything, and
+neither is `doctor` being green: `aw-workspace-cli apps` is the only
+authoritative answer to "does the thing behind this tool exist".
+
+Generalise it beyond browsers: this workspace's knowledge base documents
+**code**, not **reachability**. Searching it tells you how a component is
+built and never whether it is currently installed, wired, or answering.
+When a task depends on a backend being alive, check the app list and make
+one cheap live call before building on it — see
+`silent-degradation-is-the-failure-mode` in the knowledge base.
 
 | Tool | What it does |
 |---|---|
