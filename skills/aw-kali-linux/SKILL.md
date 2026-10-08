@@ -1,6 +1,6 @@
 ---
 name: aw-kali-linux
-description: The Kali Linux app — a full KDE desktop running in the browser as a Tier-2 aw-workspace container (stock lscr.io/linuxserver/kali-linux image). Covers what is mounted where, what survives a container recreation, how to install packages or add boot hooks so they persist, the device limits (no webcam/GPU passthrough) that come from running it as an app instead of a compose service, and the app's own federated MCP tools — Playwright browser automation (`aw__kali__aw__playwright__*`) and the `kali_control` aw-app-proxy routing toggle (`aw__kali__aw__kali_control__*`). In this workspace it is also the ONLY browser automation that actually works — `aw-app-browser` is not installed, so `aw__mini_browser__*`, `aw__devctl_browser__*` and the top-level `aw__playwright__*` all fail at call time even though the gateway lists them. Load this whenever a task involves the Kali Linux desktop window, piloting its automation browser, the proxy toggle, when something in that desktop was lost after an update, or when you need to pick a browser MCP and want the one that answers.
+description: The Kali Linux app — a full KDE desktop running in the browser as a Tier-2 aw-workspace container (stock lscr.io/linuxserver/kali-linux image). Covers what is mounted where, what survives a container recreation, how to install packages or add boot hooks so they persist, the device limits (no webcam/GPU passthrough) that come from running it as an app instead of a compose service, and the app's own federated MCP tools — Playwright browser automation (`aw__kali__aw__playwright__*`) and the `kali_control` aw-app-proxy routing toggle (`aw__kali__aw__kali_control__*`). It drives its own headed Chromium, independent of the shared `aw-app-browser` that `aw__playwright__*`, `aw__devctl_browser__*` and `aw__mini_browser__*` all pilot — pick this one for isolation or to beat automation detection. (Corrects v0.17.0, which wrongly claimed this was the only browser automation that worked here.) Load this whenever a task involves the Kali Linux desktop window, piloting its automation browser, the proxy toggle, when something in that desktop was lost after an update, or when you need to pick a browser MCP and want the one that answers.
 ---
 
 # Kali Linux — the browser desktop
@@ -149,35 +149,42 @@ reason: a real, visible Chromium inside a real desktop session reaches
 Google's password prompt with zero automation-detection rejection, where
 `aw-app-browser`'s headless Chromium gets rejected outright.
 
-#### In this workspace it is also the ONLY browser automation that works
+#### How it relates to the other browser MCPs
 
-Measured live 2026-10-06. **`aw-app-browser` is not installed here** —
-`aw-workspace-cli apps` lists `proxy`, `kali-linux`, `devctl`,
-`mini-browser`, and no `browser`. Every other browser MCP in this
-workspace is a CDP *client* of that missing container, so they all fail at
-call time rather than at discovery time:
+Verified live 2026-10-08: **all four browser MCP families work.** Three of
+them — `aw__playwright__*`, `aw__devctl_browser__*` and
+`aw__mini_browser__browser_*` — pilot the *same* shared `aw-app-browser`
+Chromium over CDP (`aw-app-browser:9223`, measured `Chrome/154`). This one
+is the odd one out: it drives **this container's own** headed Chromium, so
+it is independent of `aw-app-browser` entirely.
 
-| Tool family | What happens when you call it |
-|---|---|
-| `aw__kali__aw__playwright__*` | **works** — drives this container's own Chromium, no dependency on `aw-app-browser` |
-| `aw__mini_browser__browser_*` | `aw-app-browser not reachable over CDP (:9223) and could not be started` |
-| `aw__devctl_browser__browser_*` | same — `devctl_app.cdp` points at the same absent container |
-| `aw__playwright__*` (top-level) | configured against `aw-app-browser`'s CDP endpoint; unreachable for the same reason |
+Pick this one when you want isolation from whatever else is using the shared
+browser, a session that persists on its own, or the automation-detection
+advantage above. Pick `aw__playwright__*` for general automation.
 
-**The trap is that all of them are listed by the gateway.** `tools/list`
-reports a tool whenever its MCP server is up; it says nothing about whether
-that server's *backend* exists. `mini-browser` and `devctl` are installed
-and their MCP servers answer fine — they just have nothing to drive. So a
-tool appearing in your tool list is not evidence it can do anything, and
-neither is `doctor` being green: `aw-workspace-cli apps` is the only
-authoritative answer to "does the thing behind this tool exist".
+> **Correction.** Version 0.17.0 of this skill claimed Kali was the ONLY
+> browser automation that worked here and that `aw-app-browser` was not
+> installed. **That was wrong.** The app is installed (`browser`, 0.28.0)
+> and its container had been `Up` for 16 hours across the whole measurement.
+> The three shared-browser families really were failing at the time, but the
+> cause was a **stale MCP-gateway upstream**, not a missing app; a
+> `restart mcp-gateway` brought them all back.
 
-Generalise it beyond browsers: this workspace's knowledge base documents
-**code**, not **reachability**. Searching it tells you how a component is
-built and never whether it is currently installed, wired, or answering.
-When a task depends on a backend being alive, check the app list and make
-one cheap live call before building on it — see
-`silent-degradation-is-the-failure-mode` in the knowledge base.
+**So mind the trap in both directions.** `tools/list` reports a tool
+whenever its MCP server is up and says nothing about its backend — but a
+tool *failing* equally does not prove its backend is absent. When a browser
+tool returns `aw-app-browser not reachable over CDP (:9223) and could not be
+started`, suspect the gateway's upstream first: `doctor` reports it as "an
+upstream the gateway failed to connect to serves zero tools until a reload",
+and `aw-workspace-cli restart mcp-gateway` is the fix (it blinds every
+agent's MCP client for ~1 minute, so say so first).
+
+Diagnose cheapest-first before concluding anything is missing: read all of
+`aw-workspace-cli apps` (not a grep), check `docker ps` for the container,
+then hit the CDP endpoint directly from inside the gateway container. See
+`docs/runbooks/browser-automation-which-mcp-works.md` in the workspace repo
+for the full write-up, and `silent-degradation-is-the-failure-mode` in the
+knowledge base for the general shape.
 
 | Tool | What it does |
 |---|---|
