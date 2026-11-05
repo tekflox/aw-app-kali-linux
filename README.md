@@ -95,3 +95,5 @@ but the reconciler converges to the catalog and will revert it — see the
 ```bash
 python tests/validate_manifest.py
 ```
+
+<!-- aw-app-* fleet migration B2: follow-up no-op PR proving the comment + workflow_run merge paths (DESIGN.md §3 step 8). -->
