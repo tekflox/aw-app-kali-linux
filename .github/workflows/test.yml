@@ -35,8 +35,14 @@ jobs:
           python-version: "3.12"
 
       - name: Install deps
+        # Only pytest + jsonschema: this repo is a stock-image wrapper with
+        # no FastAPI app of its own — a repo-wide grep for fastapi/httpx/
+        # uvicorn imports across tests/, container/cdp-proxy/, and
+        # container/kali-control/ turns up nothing (round 1 of this PR's own
+        # review loop flagged the fleet-reference superset as dead weight
+        # here, correctly).
         run: |
-          pip install -q pytest jsonschema fastapi httpx uvicorn
+          pip install -q pytest jsonschema
           if [ -f requirements.txt ]; then
             pip install -q -r requirements.txt
           fi
