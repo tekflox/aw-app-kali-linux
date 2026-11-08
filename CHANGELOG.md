@@ -95,9 +95,15 @@ command-line flag: --no-sandbox. Stability and security will suffer."
 infobar on every page, pushing page content down. `--no-sandbox` itself
 can't be dropped — the container runs Chromium as root (no `USER` in
 `container/Dockerfile`), and Chrome refuses to launch as root without it.
-Added `--test-type` alongside it in `container/defaults/gateway-mcp.json`'s
-playwright args — the standard Chromium-test-suite flag that also suppresses
-this specific warning banner without touching sandboxing behavior.
+Added `--test-type` to the real Chromium launch in `container/chromium-aw`
+(both the plain and proxy-enabled `exec` branches) — the standard
+Chromium-test-suite flag that also suppresses this specific warning banner
+without touching sandboxing behavior. Not added to
+`container/defaults/gateway-mcp.json`'s playwright args: that array is
+`@playwright/mcp`'s own CLI argv, which only forwards a fixed set of flags
+it recognizes and hard-errors on anything else (`error: unknown option
+'--test-type'`) — it never reaches the real browser launch that
+`chromium-aw` wraps.
 
 ## 0.3.0
 

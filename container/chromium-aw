@@ -48,7 +48,7 @@ except Exception:
 " 2>/dev/null)
 
 if [ "${enabled:-0}" != "1" ]; then
-    exec "$REAL_CHROMIUM" "$@" --remote-debugging-port=9222
+    exec "$REAL_CHROMIUM" "$@" --remote-debugging-port=9222 --test-type
 fi
 
 # Trust aw-app-proxy's MITM CA — mirror of aw-app-browser's entrypoint-lite.sh
@@ -81,4 +81,4 @@ exec "$REAL_CHROMIUM" "$@" \
     --proxy-server="${HOST}:9124" \
     "--proxy-bypass-list=<-loopback>" \
     "--ignore-certificate-errors-spki-list=${MITM_CA_SPKI}" \
-    --remote-debugging-port=9222
+    --remote-debugging-port=9222 --test-type
