@@ -90,6 +90,21 @@ as a package-relative, single-file volume mounted into the existing
 `/custom-cont-init.d` hook dir — lands on every install, including a fresh
 one, without depending on `$AW_APP_DATA` already having a copy of it.
 
+Fix: automation Chromium showed Chrome's stock "You are using an unsupported
+command-line flag: --no-sandbox. Stability and security will suffer."
+infobar on every page, pushing page content down. `--no-sandbox` itself
+can't be dropped — the container runs Chromium as root (no `USER` in
+`container/Dockerfile`), and Chrome refuses to launch as root without it.
+Added `--test-type` to the real Chromium launch in `container/chromium-aw`
+(both the plain and proxy-enabled `exec` branches) — the standard
+Chromium-test-suite flag that also suppresses this specific warning banner
+without touching sandboxing behavior. Not added to
+`container/defaults/gateway-mcp.json`'s playwright args: that array is
+`@playwright/mcp`'s own CLI argv, which only forwards a fixed set of flags
+it recognizes and hard-errors on anything else (`error: unknown option
+'--test-type'`) — it never reaches the real browser launch that
+`chromium-aw` wraps.
+
 ## 0.3.0
 
 Renamed. The app was briefly published as `kalix` (repo `aw-app-kalix`) — a
