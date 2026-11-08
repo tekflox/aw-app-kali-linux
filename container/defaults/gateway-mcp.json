@@ -9,7 +9,8 @@
         "@playwright/mcp@0.0.77",
         "--executable-path", "/usr/local/bin/chromium-aw",
         "--user-data-dir", "/config/aw-playwright-profile",
-        "--no-sandbox"
+        "--no-sandbox",
+        "--test-type"
       ]
     },
     "kali_control": {
